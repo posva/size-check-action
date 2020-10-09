@@ -9,9 +9,7 @@
     "format": "prettier --write **/*.ts",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
-    "build": "ncc build src/main.ts -o dist",
-    "size-build": "npm run build",
-    "size": "npm run size-build && size-limit"
+    "build": "ncc build src/main.ts -o dist"
   },
   "dependencies": {
     "@actions/core": "^1.2.6",

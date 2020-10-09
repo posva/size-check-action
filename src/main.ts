@@ -19,7 +19,7 @@ async function fetchPreviousComment(
     {
       ...repo,
       // eslint-disable-next-line camelcase
-      issue_number: pr.number
+      issue_number: pr.number,
     }
   )
 
@@ -40,6 +40,7 @@ async function run() {
 
     const token = getInput('github_token')
     const buildScript = getInput('build_script')
+    const files = getInput('files').split(' ')
     const directory = getInput('directory') || process.cwd()
     getInput('windows_verbatim_arguments') === 'true' ? true : false
     const octokit = new GitHub(token)
@@ -48,19 +49,21 @@ async function run() {
 
     const base = await term.execSizeLimit({
       branch: null,
+      files,
       buildScript,
-      directory
+      directory,
     })
 
     const current = await term.execSizeLimit({
       branch: pr.base.ref,
+      files,
       buildScript,
-      directory
+      directory,
     })
 
     const body = [
       SIZE_LIMIT_HEADING,
-      table(limit.formatResults(base, current))
+      table(limit.formatResults(base, current)),
     ].join('\r\n')
 
     const sizeLimitComment = await fetchPreviousComment(octokit, repo, pr)
@@ -71,7 +74,7 @@ async function run() {
           ...repo,
           // eslint-disable-next-line camelcase
           issue_number: pr.number,
-          body
+          body,
         })
       } catch (error) {
         console.log(
@@ -84,7 +87,7 @@ async function run() {
           ...repo,
           // eslint-disable-next-line camelcase
           comment_id: sizeLimitComment.id,
-          body
+          body,
         })
       } catch (error) {
         console.log(

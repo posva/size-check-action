@@ -8,10 +8,12 @@ const BUILD_STEP = 'build'
 class Term {
   async execSizeLimit({
     branch,
+    files,
     buildScript,
-    directory
+    directory,
   }: {
     branch?: string
+    files: string[]
     buildScript: string
     directory?: string
   }) {
@@ -28,27 +30,19 @@ class Term {
     }
 
     await exec(`${manager} install`, [], {
-      cwd: directory
+      cwd: directory,
     })
 
     const script = buildScript || 'build'
     await exec(`${manager} run ${script}`, [], {
-      cwd: directory
+      cwd: directory,
     })
 
-    const pkg = require('./package.json')
-
-    if (
-      !pkg.sizeCheck ||
-      !Array.isArray(pkg.sizeCheck) ||
-      !pkg.sizeCheck.length
-    ) {
-      throw new Error(
-        'You must specify "sizeCheck" as an array of file paths to check'
-      )
+    if (!files || !Array.isArray(files) || !files.length) {
+      throw new Error(`"files" cannot be empty. Got ${JSON.stringify(files)}`)
     }
 
-    return (pkg.sizeCheck as string[]).reduce((fileMap, filePath: string) => {
+    return files.reduce((fileMap, filePath: string) => {
       const result = readFileSizeSync(filePath)
       fileMap[result.name] = result
       return fileMap

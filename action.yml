@@ -11,6 +11,9 @@ inputs:
   build_script:
     required: true
     description: 'a custom npm script to build the files to check'
+  files:
+    required: true
+    description: 'files to check separated by space'
   skip_step:
     required: false
     description: 'which step to skip, either "install" or "build"'

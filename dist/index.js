@@ -2271,6 +2271,7 @@ function run() {
             }
             const token = core_1.getInput('github_token');
             const buildScript = core_1.getInput('build_script');
+            const files = core_1.getInput('files').split(' ');
             const directory = core_1.getInput('directory') || process.cwd();
             core_1.getInput('windows_verbatim_arguments') === 'true' ? true : false;
             const octokit = new github_1.GitHub(token);
@@ -2278,17 +2279,19 @@ function run() {
             const limit = new SizeLimit_1.default();
             const base = yield term.execSizeLimit({
                 branch: null,
+                files,
                 buildScript,
-                directory
+                directory,
             });
             const current = yield term.execSizeLimit({
                 branch: pr.base.ref,
+                files,
                 buildScript,
-                directory
+                directory,
             });
             const body = [
                 SIZE_LIMIT_HEADING,
-                markdown_table_1.default(limit.formatResults(base, current))
+                markdown_table_1.default(limit.formatResults(base, current)),
             ].join('\r\n');
             const sizeLimitComment = yield fetchPreviousComment(octokit, repo, pr);
             if (!sizeLimitComment) {
@@ -4935,14 +4938,6 @@ function readShebang(command) {
 }
 
 module.exports = readShebang;
-
-
-/***/ }),
-
-/***/ 395:
-/***/ (function(module) {
-
-module.exports = eval("require")("./package.json");
 
 
 /***/ }),
@@ -11117,7 +11112,7 @@ const size_1 = __webpack_require__(139);
 const INSTALL_STEP = 'install';
 const BUILD_STEP = 'build';
 class Term {
-    execSizeLimit({ branch, buildScript, directory }) {
+    execSizeLimit({ branch, files, buildScript, directory, }) {
         return __awaiter(this, void 0, void 0, function* () {
             const manager = has_yarn_1.default() ? 'yarn' : 'npm';
             if (branch) {
@@ -11130,19 +11125,16 @@ class Term {
                 yield exec_1.exec(`git checkout -f ${branch}`);
             }
             yield exec_1.exec(`${manager} install`, [], {
-                cwd: directory
+                cwd: directory,
             });
             const script = buildScript || 'build';
             yield exec_1.exec(`${manager} run ${script}`, [], {
-                cwd: directory
+                cwd: directory,
             });
-            const pkg = __webpack_require__(395);
-            if (!pkg.sizeCheck ||
-                !Array.isArray(pkg.sizeCheck) ||
-                !pkg.sizeCheck.length) {
-                throw new Error('You must specify "sizeCheck" as an array of file paths to check');
+            if (!files || !Array.isArray(files) || !files.length) {
+                throw new Error(`"files" cannot be empty. Got ${JSON.stringify(files)}`);
             }
-            return pkg.sizeCheck.reduce((fileMap, filePath) => {
+            return files.reduce((fileMap, filePath) => {
                 const result = size_1.readFileSizeSync(filePath);
                 fileMap[result.name] = result;
                 return fileMap;

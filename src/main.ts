@@ -1,12 +1,12 @@
-import { getInput, setFailed } from "@actions/core";
-import { context, GitHub } from "@actions/github";
+import { getInput, setFailed } from '@actions/core'
+import { context, GitHub } from '@actions/github'
 // @ts-ignore
-import table from "markdown-table";
-import Term from "./Term";
-import SizeLimit from "./SizeLimit";
+import table from 'markdown-table'
+import Term from './Term'
+import SizeLimit from './SizeLimit'
 
-const SIZE_LIMIT_URL = "https://github.com/ai/size-limit";
-const SIZE_LIMIT_HEADING = `## [size-limit](${SIZE_LIMIT_URL}) report`;
+const SIZE_LIMIT_URL = 'https://github.com/ai/size-limit'
+const SIZE_LIMIT_HEADING = `## Size report`
 
 async function fetchPreviousComment(
   octokit: GitHub,
@@ -15,75 +15,55 @@ async function fetchPreviousComment(
 ) {
   // TODO: replace with octokit.issues.listComments when upgraded to v17
   const commentList = await octokit.paginate(
-    "GET /repos/:owner/:repo/issues/:issue_number/comments",
+    'GET /repos/:owner/:repo/issues/:issue_number/comments',
     {
       ...repo,
       // eslint-disable-next-line camelcase
       issue_number: pr.number
     }
-  );
+  )
 
   const sizeLimitComment = commentList.find(comment =>
     comment.body.startsWith(SIZE_LIMIT_HEADING)
-  );
-  return !sizeLimitComment ? null : sizeLimitComment;
+  )
+  return !sizeLimitComment ? null : sizeLimitComment
 }
 
 async function run() {
   try {
-    const { payload, repo } = context;
-    const pr = payload.pull_request;
+    const { payload, repo } = context
+    const pr = payload.pull_request
 
     if (!pr) {
-      throw new Error(
-        "No PR found. Only pull_request workflows are supported."
-      );
+      throw new Error('No PR found. Only pull_request workflows are supported.')
     }
 
-    const token = getInput("github_token");
-    const skipStep = getInput("skip_step");
-    const buildScript = getInput("build_script");
-    const directory = getInput("directory") || process.cwd();
-    const windowsVerbatimArguments =
-      getInput("windows_verbatim_arguments") === "true" ? true : false;
-    const octokit = new GitHub(token);
-    const term = new Term();
-    const limit = new SizeLimit();
+    const token = getInput('github_token')
+    const buildScript = getInput('build_script')
+    const directory = getInput('directory') || process.cwd()
+    getInput('windows_verbatim_arguments') === 'true' ? true : false
+    const octokit = new GitHub(token)
+    const term = new Term()
+    const limit = new SizeLimit()
 
-    const { status, output } = await term.execSizeLimit(
-      null,
-      skipStep,
+    const base = await term.execSizeLimit({
+      branch: null,
       buildScript,
-      windowsVerbatimArguments,
       directory
-    );
-    const { output: baseOutput } = await term.execSizeLimit(
-      pr.base.ref,
-      null,
+    })
+
+    const current = await term.execSizeLimit({
+      branch: pr.base.ref,
       buildScript,
-      windowsVerbatimArguments,
       directory
-    );
-
-    let base;
-    let current;
-
-    try {
-      base = limit.parseResults(baseOutput);
-      current = limit.parseResults(output);
-    } catch (error) {
-      console.log(
-        "Error parsing size-limit output. The output should be a json."
-      );
-      throw error;
-    }
+    })
 
     const body = [
       SIZE_LIMIT_HEADING,
       table(limit.formatResults(base, current))
-    ].join("\r\n");
+    ].join('\r\n')
 
-    const sizeLimitComment = await fetchPreviousComment(octokit, repo, pr);
+    const sizeLimitComment = await fetchPreviousComment(octokit, repo, pr)
 
     if (!sizeLimitComment) {
       try {
@@ -92,11 +72,11 @@ async function run() {
           // eslint-disable-next-line camelcase
           issue_number: pr.number,
           body
-        });
+        })
       } catch (error) {
         console.log(
           "Error creating comment. This can happen for PR's originating from a fork without write permissions."
-        );
+        )
       }
     } else {
       try {
@@ -105,20 +85,20 @@ async function run() {
           // eslint-disable-next-line camelcase
           comment_id: sizeLimitComment.id,
           body
-        });
+        })
       } catch (error) {
         console.log(
           "Error updating comment. This can happen for PR's originating from a fork without write permissions."
-        );
+        )
       }
     }
 
-    if (status > 0) {
-      setFailed("Size limit has been exceeded.");
-    }
+    // if (status > 0) {
+    //   setFailed('Size limit has been exceeded.')
+    // }
   } catch (error) {
-    setFailed(error.message);
+    setFailed(error.message)
   }
 }
 
-run();
+run()

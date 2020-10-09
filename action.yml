@@ -1,6 +1,6 @@
 name: 'size-limit-action'
 description: 'size-limit action'
-author: 'Andres Alvarez <a.alvarez.sor@gmail.com>'
+author: 'Eduardo San Martin Morote <posva13@gmail.com>'
 branding:
   icon: 'activity'
   color: 'green'
@@ -9,17 +9,17 @@ inputs:
     required: true
     description: 'a github access token'
   build_script:
-    required: false
-    description: 'a custom npm script to build'
+    required: true
+    description: 'a custom npm script to build the files to check'
   skip_step:
     required: false
     description: 'which step to skip, either "install" or "build"'
   directory:
     required: false
-    description: "a custom subdirectory"
+    description: 'a custom subdirectory'
   windows_verbatim_arguments:
     required: false
-    description: "exec `size-limit` with the option `windowsVerbatimArguments`"
+    description: 'exec `size-limit` with the option `windowsVerbatimArguments`'
     default: true
 runs:
   using: 'node12'

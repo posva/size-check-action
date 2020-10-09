@@ -1,67 +1,67 @@
 // @ts-ignore
-import bytes from "bytes";
+import bytes from 'bytes'
 
 interface IResult {
-  name: string;
-  size: number;
-  running?: number;
-  loading?: number;
-  total?: number;
+  name: string
+  size: number
+  running?: number
+  loading?: number
+  total?: number
 }
 
 const EmptyResult = {
-  name: "-",
+  name: '-',
   size: 0,
   running: 0,
   loading: 0,
   total: 0
-};
+}
 
 class SizeLimit {
-  static SIZE_RESULTS_HEADER = ["Path", "Size"];
+  static SIZE_RESULTS_HEADER = ['Path', 'Size']
 
   static TIME_RESULTS_HEADER = [
-    "Path",
-    "Size",
-    "Loading time (3g)",
-    "Running time (snapdragon)",
-    "Total time"
-  ];
+    'Path',
+    'Size',
+    'Loading time (3g)',
+    'Running time (snapdragon)',
+    'Total time'
+  ]
 
   private formatBytes(size: number): string {
-    return bytes.format(size, { unitSeparator: " " });
+    return bytes.format(size, { unitSeparator: ' ' })
   }
 
   private formatTime(seconds: number): string {
     if (seconds >= 1) {
-      return `${Math.ceil(seconds * 10) / 10} s`;
+      return `${Math.ceil(seconds * 10) / 10} s`
     }
 
-    return `${Math.ceil(seconds * 1000)} ms`;
+    return `${Math.ceil(seconds * 1000)} ms`
   }
 
   private formatChange(base: number = 0, current: number = 0): string {
     if (current === 0) {
-      return "-100%";
+      return '-100%'
     }
 
-    const value = ((current - base) / current) * 100;
+    const value = ((current - base) / current) * 100
     const formatted =
-      (Math.sign(value) * Math.ceil(Math.abs(value) * 100)) / 100;
+      (Math.sign(value) * Math.ceil(Math.abs(value) * 100)) / 100
 
     if (value > 0) {
-      return `+${formatted}% 🔺`;
+      return `+${formatted}% 🔺`
     }
 
     if (value === 0) {
-      return `${formatted}%`;
+      return `${formatted}%`
     }
 
-    return `${formatted}% 🔽`;
+    return `${formatted}% 🔽`
   }
 
   private formatLine(value: string, change: string) {
-    return `${value} (${change})`;
+    return `${value} (${change})`
   }
 
   private formatSizeResult(
@@ -75,7 +75,7 @@ class SizeLimit {
         this.formatBytes(current.size),
         this.formatChange(base.size, current.size)
       )
-    ];
+    ]
   }
 
   private formatTimeResult(
@@ -98,25 +98,25 @@ class SizeLimit {
         this.formatChange(base.running, current.running)
       ),
       this.formatTime(current.total)
-    ];
+    ]
   }
 
   parseResults(output: string): { [name: string]: IResult } {
-    const results = JSON.parse(output);
+    const results = JSON.parse(output)
 
     return results.reduce(
       (current: { [name: string]: IResult }, result: any) => {
-        let time = {};
+        let time = {}
 
         if (result.loading !== undefined && result.running !== undefined) {
-          const loading = +result.loading;
-          const running = +result.running;
+          const loading = +result.loading
+          const running = +result.running
 
           time = {
             running,
             loading,
             total: loading + running
-          };
+          }
         }
 
         return {
@@ -126,34 +126,34 @@ class SizeLimit {
             size: +result.size,
             ...time
           }
-        };
+        }
       },
       {}
-    );
+    )
   }
 
   formatResults(
     base: { [name: string]: IResult },
     current: { [name: string]: IResult }
   ): Array<Array<string>> {
-    const names = [...new Set([...Object.keys(base), ...Object.keys(current)])];
+    const names = [...new Set([...Object.keys(base), ...Object.keys(current)])]
     const isSize = names.some(
       (name: string) => current[name] && current[name].total === undefined
-    );
+    )
     const header = isSize
       ? SizeLimit.SIZE_RESULTS_HEADER
-      : SizeLimit.TIME_RESULTS_HEADER;
+      : SizeLimit.TIME_RESULTS_HEADER
     const fields = names.map((name: string) => {
-      const baseResult = base[name] || EmptyResult;
-      const currentResult = current[name] || EmptyResult;
+      const baseResult = base[name] || EmptyResult
+      const currentResult = current[name] || EmptyResult
 
       if (isSize) {
-        return this.formatSizeResult(name, baseResult, currentResult);
+        return this.formatSizeResult(name, baseResult, currentResult)
       }
-      return this.formatTimeResult(name, baseResult, currentResult);
-    });
+      return this.formatTimeResult(name, baseResult, currentResult)
+    })
 
-    return [header, ...fields];
+    return [header, ...fields]
   }
 }
-export default SizeLimit;
+export default SizeLimit

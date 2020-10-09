@@ -1,59 +1,64 @@
-import { exec } from "@actions/exec";
-import hasYarn from "has-yarn";
+import { exec } from '@actions/exec'
+import hasYarn from 'has-yarn'
+import { readFileSizeSync } from './size'
 
-const INSTALL_STEP = "install";
-const BUILD_STEP = "build";
+const INSTALL_STEP = 'install'
+const BUILD_STEP = 'build'
 
 class Term {
-  async execSizeLimit(
-    branch?: string,
-    skipStep?: string,
-    buildScript?: string,
-    windowsVerbatimArguments?: boolean,
+  async execSizeLimit({
+    branch,
+    buildScript,
+    directory
+  }: {
+    branch?: string
+    buildScript: string
     directory?: string
-  ): Promise<{ status: number; output: string }> {
-    const manager = hasYarn() ? "yarn" : "npm";
-    let output = "";
+  }) {
+    const manager = hasYarn() ? 'yarn' : 'npm'
 
     if (branch) {
       try {
-        await exec(`git fetch origin ${branch} --depth=1`);
+        await exec(`git fetch origin ${branch} --depth=1`)
       } catch (error) {
-        console.log("Fetch failed", error.message);
+        console.log('Fetch failed', error.message)
       }
 
-      await exec(`git checkout -f ${branch}`);
+      await exec(`git checkout -f ${branch}`)
     }
 
-    if (skipStep !== INSTALL_STEP && skipStep !== BUILD_STEP) {
-      await exec(`${manager} install`, [], {
-        cwd: directory
-      });
-    }
-
-    if (skipStep !== BUILD_STEP) {
-      const script = buildScript || "build";
-      await exec(`${manager} run ${script}`, [], {
-        cwd: directory
-      });
-    }
-
-    const status = await exec("npx size-limit --json", [], {
-      windowsVerbatimArguments,
-      ignoreReturnCode: true,
-      listeners: {
-        stdout: (data: Buffer) => {
-          output += data.toString();
-        }
-      },
+    await exec(`${manager} install`, [], {
       cwd: directory
-    });
+    })
 
-    return {
-      status,
-      output
-    };
+    const script = buildScript || 'build'
+    await exec(`${manager} run ${script}`, [], {
+      cwd: directory
+    })
+
+    const pkg = require('./package.json')
+
+    if (
+      !pkg.sizeCheck ||
+      !Array.isArray(pkg.sizeCheck) ||
+      !pkg.sizeCheck.length
+    ) {
+      throw new Error(
+        'You must specify "sizeCheck" as an array of file paths to check'
+      )
+    }
+
+    return (pkg.sizeCheck as string[]).reduce((fileMap, filePath: string) => {
+      const result = readFileSizeSync(filePath)
+      fileMap[result.name] = result
+      return fileMap
+    }, {} as Record<string, ReturnType<typeof readFileSizeSync>>)
+
+    // return {
+    //   status,
+    //   output
+    // }
   }
 }
 
-export default Term;
+export default Term

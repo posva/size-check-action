@@ -2249,7 +2249,6 @@ const github_1 = __webpack_require__(469);
 const markdown_table_1 = __importDefault(__webpack_require__(366));
 const Term_1 = __importDefault(__webpack_require__(733));
 const SizeLimit_1 = __importDefault(__webpack_require__(617));
-const SIZE_LIMIT_URL = 'https://github.com/ai/size-limit';
 const SIZE_LIMIT_HEADING = `## Size report`;
 function fetchPreviousComment(octokit, repo, pr) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -2261,62 +2260,65 @@ function fetchPreviousComment(octokit, repo, pr) {
         return !sizeLimitComment ? null : sizeLimitComment;
     });
 }
-function run() {
+function getOptions() {
+    return {
+        token: core_1.getInput('github_token'),
+        buildScript: core_1.getInput('build_script'),
+        files: core_1.getInput('files').split(' '),
+        directory: core_1.getInput('directory') || process.cwd(),
+    };
+}
+function compareToRef(ref, pr, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const { payload, repo } = github_1.context;
-            const pr = payload.pull_request;
-            if (!pr) {
-                throw new Error('No PR found. Only pull_request workflows are supported.');
-            }
-            const token = core_1.getInput('github_token');
-            const buildScript = core_1.getInput('build_script');
-            const files = core_1.getInput('files').split(' ');
-            const directory = core_1.getInput('directory') || process.cwd();
-            core_1.getInput('windows_verbatim_arguments') === 'true' ? true : false;
-            const octokit = new github_1.GitHub(token);
-            const term = new Term_1.default();
-            const limit = new SizeLimit_1.default();
-            const base = yield term.execSizeLimit({
-                branch: null,
-                files,
-                buildScript,
-                directory,
-            });
-            const current = yield term.execSizeLimit({
-                branch: pr.base.ref,
-                files,
-                buildScript,
-                directory,
-            });
-            const body = [
-                SIZE_LIMIT_HEADING,
-                markdown_table_1.default(limit.formatResults(base, current)),
-            ].join('\r\n');
+        const { token, buildScript, files, directory } = getOptions();
+        const octokit = new github_1.GitHub(token);
+        const term = new Term_1.default();
+        const limit = new SizeLimit_1.default();
+        const base = yield term.execSizeLimit({
+            branch: null,
+            files,
+            buildScript,
+            directory,
+        });
+        const current = yield term.execSizeLimit({
+            branch: ref,
+            files,
+            buildScript,
+            directory,
+        });
+        const mdTable = markdown_table_1.default(limit.formatResults(base, current));
+        console.log(mdTable);
+        if (pr && repo) {
+            const body = [SIZE_LIMIT_HEADING, mdTable].join('\r\n');
             const sizeLimitComment = yield fetchPreviousComment(octokit, repo, pr);
-            if (!sizeLimitComment) {
-                try {
+            try {
+                if (!sizeLimitComment) {
                     yield octokit.issues.createComment(Object.assign(Object.assign({}, repo), { 
                         // eslint-disable-next-line camelcase
                         issue_number: pr.number, body }));
                 }
-                catch (error) {
-                    console.log("Error creating comment. This can happen for PR's originating from a fork without write permissions.");
-                }
-            }
-            else {
-                try {
+                else {
                     yield octokit.issues.updateComment(Object.assign(Object.assign({}, repo), { 
                         // eslint-disable-next-line camelcase
                         comment_id: sizeLimitComment.id, body }));
                 }
-                catch (error) {
-                    console.log("Error updating comment. This can happen for PR's originating from a fork without write permissions.");
-                }
             }
-            // if (status > 0) {
-            //   setFailed('Size limit has been exceeded.')
-            // }
+            catch (error) {
+                console.log("Error creating/updating comment. This can happen for PR's originating from a fork without write permissions.");
+            }
+        }
+    });
+}
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pr = github_1.context.payload.pull_request;
+        try {
+            if (pr) {
+                yield compareToRef(pr.base.ref, pr, github_1.context.repo);
+            }
+            else {
+                yield compareToRef('HEAD^');
+            }
         }
         catch (error) {
             core_1.setFailed(error.message);

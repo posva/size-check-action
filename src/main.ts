@@ -4,8 +4,9 @@ import { context, GitHub } from '@actions/github'
 import table from 'markdown-table'
 import Term from './Term'
 import SizeLimit from './SizeLimit'
+import { WebhookPayload } from '@actions/github/lib/interfaces'
+import { Context } from '@actions/github/lib/context'
 
-const SIZE_LIMIT_URL = 'https://github.com/ai/size-limit'
 const SIZE_LIMIT_HEADING = `## Size report`
 
 async function fetchPreviousComment(
@@ -29,76 +30,81 @@ async function fetchPreviousComment(
   return !sizeLimitComment ? null : sizeLimitComment
 }
 
-async function run() {
-  try {
-    const { payload, repo } = context
-    const pr = payload.pull_request
+type GHRepo = Context['repo']
+type GHPullRequest = WebhookPayload['pull_request']
 
-    if (!pr) {
-      throw new Error('No PR found. Only pull_request workflows are supported.')
-    }
+function getOptions() {
+  return {
+    token: getInput('github_token'),
+    buildScript: getInput('build_script'),
+    files: getInput('files').split(' '),
+    directory: getInput('directory') || process.cwd(),
+  }
+}
 
-    const token = getInput('github_token')
-    const buildScript = getInput('build_script')
-    const files = getInput('files').split(' ')
-    const directory = getInput('directory') || process.cwd()
-    getInput('windows_verbatim_arguments') === 'true' ? true : false
-    const octokit = new GitHub(token)
-    const term = new Term()
-    const limit = new SizeLimit()
+async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
+  const { token, buildScript, files, directory } = getOptions()
 
-    const base = await term.execSizeLimit({
-      branch: null,
-      files,
-      buildScript,
-      directory,
-    })
+  const octokit = new GitHub(token)
+  const term = new Term()
+  const limit = new SizeLimit()
 
-    const current = await term.execSizeLimit({
-      branch: pr.base.ref,
-      files,
-      buildScript,
-      directory,
-    })
+  const base = await term.execSizeLimit({
+    branch: null,
+    files,
+    buildScript,
+    directory,
+  })
 
-    const body = [
-      SIZE_LIMIT_HEADING,
-      table(limit.formatResults(base, current)),
-    ].join('\r\n')
+  const current = await term.execSizeLimit({
+    branch: ref,
+    files,
+    buildScript,
+    directory,
+  })
+
+  const mdTable = table(limit.formatResults(base, current))
+
+  console.log(mdTable)
+
+  if (pr && repo) {
+    const body = [SIZE_LIMIT_HEADING, mdTable].join('\r\n')
 
     const sizeLimitComment = await fetchPreviousComment(octokit, repo, pr)
 
-    if (!sizeLimitComment) {
-      try {
+    try {
+      if (!sizeLimitComment) {
         await octokit.issues.createComment({
           ...repo,
           // eslint-disable-next-line camelcase
           issue_number: pr.number,
           body,
         })
-      } catch (error) {
-        console.log(
-          "Error creating comment. This can happen for PR's originating from a fork without write permissions."
-        )
-      }
-    } else {
-      try {
+      } else {
         await octokit.issues.updateComment({
           ...repo,
           // eslint-disable-next-line camelcase
           comment_id: sizeLimitComment.id,
           body,
         })
-      } catch (error) {
-        console.log(
-          "Error updating comment. This can happen for PR's originating from a fork without write permissions."
-        )
       }
+    } catch (error) {
+      console.log(
+        "Error creating/updating comment. This can happen for PR's originating from a fork without write permissions."
+      )
     }
+  }
+}
 
-    // if (status > 0) {
-    //   setFailed('Size limit has been exceeded.')
-    // }
+async function run() {
+  const pr = context.payload.pull_request
+
+  try {
+    if (pr) {
+      await compareToRef(pr.base.ref as string, pr, context.repo)
+    } else {
+      await compareToRef('HEAD^')
+    }
   } catch (error) {
     setFailed(error.message)
   }

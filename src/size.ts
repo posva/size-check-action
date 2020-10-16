@@ -24,7 +24,7 @@ export function readFileSizeSync(filePath: string) {
     name: path.basename(filePath),
     size: gzipped.length,
     brotli: compressed.length,
-    minSize: file.length
+    minSize: file.length,
   }
 }
 

@@ -49,15 +49,16 @@ async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
   const term = new Term()
   const limit = new SizeLimit()
 
+  // the new commit or PR
   const base = await term.execSizeLimit({
-    branch: ref,
+    branch: null,
     files,
     buildScript,
     directory,
   })
 
   const current = await term.execSizeLimit({
-    branch: null,
+    branch: ref,
     files,
     buildScript,
     directory,

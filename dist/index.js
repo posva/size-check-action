@@ -2275,16 +2275,22 @@ function compareToRef(ref, pr, repo) {
         const term = new Term_1.default();
         const limit = new SizeLimit_1.default();
         const base = yield term.execSizeLimit({
-            branch: null,
+            branch: ref,
             files,
             buildScript,
             directory,
         });
         const current = yield term.execSizeLimit({
-            branch: ref,
+            branch: null,
             files,
             buildScript,
             directory,
+        });
+        Object.keys(current).forEach(name => {
+            console.log('Current ' + limit.formatSizeLog(name, current[name]));
+        });
+        Object.keys(base).forEach(name => {
+            console.log(`PR ${ref}, ` + limit.formatSizeLog(name, base[name]));
         });
         const mdTable = markdown_table_1.default(limit.formatResults(base, current));
         console.log(mdTable);
@@ -2360,7 +2366,7 @@ function readFileSizeSync(filePath) {
         name: path.basename(filePath),
         size: gzipped.length,
         brotli: compressed.length,
-        minSize: file.length
+        minSize: file.length,
     };
 }
 exports.readFileSizeSync = readFileSizeSync;
@@ -8776,7 +8782,7 @@ const EmptyResult = {
     size: 0,
     running: 0,
     loading: 0,
-    total: 0
+    total: 0,
 };
 class SizeLimit {
     formatBytes(size) {
@@ -8805,10 +8811,13 @@ class SizeLimit {
     formatLine(value, change) {
         return `${value} (${change})`;
     }
+    formatSizeLog(name, current) {
+        return `${name}: ${this.formatBytes(current.size)}`;
+    }
     formatSizeResult(name, base, current) {
         return [
             name,
-            this.formatLine(this.formatBytes(current.size), this.formatChange(base.size, current.size))
+            this.formatLine(this.formatBytes(current.size), this.formatChange(base.size, current.size)),
         ];
     }
     formatTimeResult(name, base, current) {
@@ -8817,7 +8826,7 @@ class SizeLimit {
             this.formatLine(this.formatBytes(current.size), this.formatChange(base.size, current.size)),
             this.formatLine(this.formatTime(current.loading), this.formatChange(base.loading, current.loading)),
             this.formatLine(this.formatTime(current.running), this.formatChange(base.running, current.running)),
-            this.formatTime(current.total)
+            this.formatTime(current.total),
         ];
     }
     parseResults(output) {
@@ -8830,7 +8839,7 @@ class SizeLimit {
                 time = {
                     running,
                     loading,
-                    total: loading + running
+                    total: loading + running,
                 };
             }
             return Object.assign(Object.assign({}, current), { [result.name]: Object.assign({ name: result.name, size: +result.size }, time) });
@@ -8859,7 +8868,7 @@ SizeLimit.TIME_RESULTS_HEADER = [
     'Size',
     'Loading time (3g)',
     'Running time (snapdragon)',
-    'Total time'
+    'Total time',
 ];
 exports.default = SizeLimit;
 

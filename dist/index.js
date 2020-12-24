@@ -2274,14 +2274,15 @@ function compareToRef(ref, pr, repo) {
         const octokit = new github_1.GitHub(token);
         const term = new Term_1.default();
         const limit = new SizeLimit_1.default();
+        // the new commit or PR
         const base = yield term.execSizeLimit({
-            branch: ref,
+            branch: null,
             files,
             buildScript,
             directory,
         });
         const current = yield term.execSizeLimit({
-            branch: null,
+            branch: ref,
             files,
             buildScript,
             directory,

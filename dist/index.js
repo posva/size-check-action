@@ -2275,23 +2275,23 @@ function compareToRef(ref, pr, repo) {
         const term = new Term_1.default();
         const limit = new SizeLimit_1.default();
         // the new commit or PR
-        const base = yield term.execSizeLimit({
+        const current = yield term.execSizeLimit({
             branch: null,
             files,
             buildScript,
             directory,
         });
-        const current = yield term.execSizeLimit({
+        const base = yield term.execSizeLimit({
             branch: ref,
             files,
             buildScript,
             directory,
         });
         Object.keys(current).forEach(name => {
-            console.log('Current ' + limit.formatSizeLog(name, current[name]));
+            console.log('Incoming changes, ' + limit.formatSizeLog(name, current[name]));
         });
         Object.keys(base).forEach(name => {
-            console.log(`PR ${ref}, ` + limit.formatSizeLog(name, base[name]));
+            console.log(`Base at ${ref}, ` + limit.formatSizeLog(name, base[name]));
         });
         const mdTable = markdown_table_1.default(limit.formatResults(base, current));
         console.log(mdTable);

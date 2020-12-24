@@ -7,11 +7,11 @@ export function readFileSizeSync(filePath: string) {
   if (!fs.existsSync(filePath)) {
     return
   }
-  const file = fs.readFileSync(filePath)
+  const file = fs.readFileSync(filePath) as string
   // const minSize = (file.length / 1024).toFixed(2) + 'kb'
-  const gzipped = gzipSync(file)
+  const gzipped = gzipSync(file) as string
   // const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = compress(file)
+  const compressed = compress(file) as string
   // const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
 
   // process.stderr.write(
@@ -21,7 +21,7 @@ export function readFileSizeSync(filePath: string) {
   // )
 
   return {
-    name: path.basename(filePath),
+    name: path.basename(filePath) as string,
     size: gzipped.length,
     brotli: compressed.length,
     minSize: file.length,

@@ -64,6 +64,10 @@ class SizeLimit {
     return `${value} (${change})`
   }
 
+  formatSizeLog(name: string, current: IResult) {
+    return `${name}: ${this.formatBytes(current.size)}`
+  }
+
   private formatSizeResult(
     name: string,
     base: IResult,

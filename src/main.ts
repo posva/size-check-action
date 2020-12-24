@@ -50,17 +50,25 @@ async function compareToRef(ref: string, pr?: GHPullRequest, repo?: GHRepo) {
   const limit = new SizeLimit()
 
   const base = await term.execSizeLimit({
-    branch: null,
+    branch: ref,
     files,
     buildScript,
     directory,
   })
 
   const current = await term.execSizeLimit({
-    branch: ref,
+    branch: null,
     files,
     buildScript,
     directory,
+  })
+
+  Object.keys(current).forEach(name => {
+    console.log('Current ' + limit.formatSizeLog(name, current[name]))
+  })
+
+  Object.keys(base).forEach(name => {
+    console.log(`PR ${ref}, ` + limit.formatSizeLog(name, base[name]))
   })
 
   const mdTable = table(limit.formatResults(base, current))

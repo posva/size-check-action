@@ -80,6 +80,15 @@ with:
   directory: client/
 ```
 
+## Releasing
+
+Notes when releasing
+
+- `yarn run build`
+- `git commit`
+- `git tag v1.1.2`
+- `git push --follow-tags` or `git push origin v1.1.2`
+
 ## Feedback
 
 Pull requests, feature ideas and bug reports are very welcome. We highly appreciate any feedback.
